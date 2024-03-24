@@ -51,17 +51,17 @@ Our Wine Dataset is actually comprised of two different wine subsets of data.  W
 
 \noindent With what we know about our wine data, this we can already provide information about our future machine learning model.  Preprocessing will include some method of data normalization, and we will be doing supervised training on the data to predict wine quality. 
 
-\noindent If we simply perform machine learning on the dataset without any preprocessing we can obtain a base case for model performance on the dataset.  A confusion matrix on the left of Figure 4 shows our first run of such a model on the white wine data, which performed with an accuracy score of 56.94\%:    
+\noindent If we simply perform machine learning on the dataset without any preprocessing we can obtain a base case for model performance on the dataset.  A confusion matrix on the left of Figure 4 shows our first run of such a model on the white wine data, which performed with an accuracy score of 57.86\%:    
 
 \begin{figure}
 	\centering
-	\includegraphics[width=.4\textwidth]{img/whitematrix.png}
-		\includegraphics[width=.4\textwidth]{img/redmatrix.png}
+	\includegraphics[width=.36\textwidth]{img/whitematrix.png}
+	\includegraphics[width=.4\textwidth]{img/redmatrix.png}
 	\caption{Wine Test Performance Base Case: White on Left, Red on Right}
 \end{figure}
 
 
-\noindent Performing base case machine learning on red wine dataset performed similarly, with an accuracy score of 67.5 \% as shown on the right matrix in the figure [Figure 4].  Over 5 iterations of both the white and red wine datasets, average accuracy was 57.53\% for white wines and  66.25\% for red wines.  After performing an initial normalization on the feature data for both the red and white wine datasets, accuracy after 5 iterations seemed to drop noticeably for the red wine model 61.3\% while remaining relatively consistent for the white wine model 57.7\%.  I would assume this is likely because of the larger size of the white wine dataset, but cannot say for sure why this is the case without additional investigation.
+\noindent Performing base case machine learning on red wine dataset performed similarly, with an accuracy score of 68.125 \% as shown on the right matrix in the figure [Figure 4].  Over 5 iterations of both the white and red wine datasets, average accuracy was 57.61\% for white wines and  67.25\% for red wines.  After performing an initial normalization on the feature data for both the red and white wine datasets, accuracy after 5 iterations seemed to drop noticeably for the red wine model 61.3\% while remaining relatively consistent for the white wine model 57.5\%.  I would assume this is likely because of the larger size of the white wine dataset, but cannot say for sure why this is the case without additional investigation.
 
 \noindent As we iterate through possible data processing actions, from the base case since we do not have to deal with null data or missing values, we perform the following  data cleanup tasks:
 \begin{enumerate}
@@ -96,6 +96,46 @@ Our Wine Dataset is actually comprised of two different wine subsets of data.  W
 		\hline
 	\end{tabular}
 \end{center}
+
+As we look through the dataset we can determine several things:  
+\begin{enumerate}
+	\item So far normalization and scaling doesn't seem to result in much of a change to performance.  Standard Scale and Transform results in a slight change.  
+	\item Histograms of both Red and White Wine label distribution suggest significantly skewed samples and unbalanced data.  A large majority of all wines are labeled with qualities 5 or 6 but minimal samples are provided for other quality classes 3, 4, 7, 8, and 9.  Some research suggests this can be corrected through resampling.  
+	\item Most features also tend to be skewed towards the right. Those most skewed are Residual Sugar, Chlorides, Free Sulphur Dioxide, Total Sulphur Dioxide, and Sulphates. Such features may need to be transformed for certain model algorithms by applying transformation to improve classification performance.
+	\begin{center}
+		\includegraphics[width=.6\textwidth]{img/featureskews.png}
+	\end{center}
+
+\end{enumerate}
+
+To make things a little quicker, at this point, performance evaluation is focused upon the white dataset only as that seems to have more room for improvement.  We attempt to unskew some of the features using a logrithmic transformation on certain data features.  
+
+We perform log transformation on residual sugars, chlorides, free sulfur dioxide, total sulfur dioxide, and sulfates.  
+\newline
+\begin{center}
+	\includegraphics[width=.17\textwidth]{img/logscaledfeatures1.png}
+	\includegraphics[width=.5\textwidth]{img/logscaledfeatures2.png}
+	\includegraphics[width=.17\textwidth]{img/logscaledfeatures3.png}
+\end{center}
+
+Performance after log scaling specific features in the dataset does not appear to have a large effect on total performance.  The result of 5 runs is an average accuracy of 58.1\%, somewhat similar to the performance result improvement when using standard scaler transformation.
+
+Our last attempt to improve performance is based upon trying to use resampling to provide more samples of underrepresented classifications.  Towards that end we upsample classes 3,4,7,8, and 9 using the resample library in scikitlearn resulting in a total of 1000 samples in each of those classifications, respectively.  Upon doing so, performance appears to have jumped up significantly:  
+\newline
+\begin{center}
+	\includegraphics[width=.5\textwidth]{img/resampledmatrixwithscores.png}
+\end{center}
+
+While this initially seems like a reason for celebration, it is misleading.  Because scikitlearn's resampling library basically duplicates samples to result in more of them, those same samples are leaked from the training to the test data resulting in identical data instances and observations in both training and testing, leading to a very high number of correct predictions on under-represented classifications within the test performance.  
+
+To correct this, we need to go back and only train the model on the resampled data, but stick with the un-resampled data in testing.  When we do that, we notice that the performance has actually dropped slightly:  
+\newline
+\begin{center}
+	\includegraphics[width=.5\textwidth]{img/resamplematrixnodataleak.png}
+\end{center}
+
+This is suspected because the trained model no longer sees outlier values as outliers and would predict them more often than otherwise because the model doesn't account for their less likely occurrence in overall prediction.  
+
 
 \section*{Results of the Analysis: Tumor Dataset}
 Our Tumor dataset was obtained from the openml website \cite{dataset1} and consists of 17 total features and a single binary label that is either positive or negative listed in the dataset as "N" or "P".  There are 339 instances in the data.  Additionally, the data repository contains some initial analysis on the data and some of those images can be viewed within this document. Several features contain missing data and 2 features ('degree-of-diffe' and 'histologic-type') contain a large number of missing values, 155 and 67 respectively. These missing values show up in the data as '?" of type string/object and need to be changed so that they are recognized as null values within the set.  A large number of instances also have individual instances contain some form of missing value (207 of the total 339 which is significant). Therefore simply deleting any instances with missing values would significantly limit out data set and is not a suitable solution for this particular collection of data.  
